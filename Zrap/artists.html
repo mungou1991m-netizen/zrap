@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zrap · For artists</title>
+<style>
+  :root {
+    --zrap-green: #B6FF3C;
+    --zrap-ink: #0a0a0a;
+    --zrap-ink-2: #141414;
+    --zrap-ink-3: #1d1d1d;
+    --zrap-dim: #8a8a8a;
+    --zrap-line: #262626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100vh; background: var(--zrap-ink); color: #f2f2f2; font-family: -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, select { font: inherit; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px; border-bottom: 1px solid var(--zrap-line);
+  }
+  .brand { font-size: 26px; font-weight: 800; font-style: italic; letter-spacing: -1px; color: var(--zrap-green); }
+  .back { color: var(--zrap-dim); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .back:hover { color: #fff; }
+
+  main { max-width: 760px; margin: 40px auto; padding: 0 24px 60px; }
+  h1 { font-size: 32px; letter-spacing: -0.8px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 32px 0 14px; }
+  .muted { color: var(--zrap-dim); font-size: 14px; }
+
+  .card {
+    background: var(--zrap-ink-2); border: 1px solid var(--zrap-line); border-radius: 14px; padding: 22px;
+    margin-top: 20px;
+  }
+  label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--zrap-dim); display: block; margin-top: 14px; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=email], input[type=password], input[type=url], select {
+    width: 100%; padding: 10px 12px; margin-top: 6px; background: var(--zrap-ink);
+    border: 1px solid var(--zrap-line); border-radius: 10px; color: #fff; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--zrap-green); }
+  input[type=file] {
+    width: 100%; margin-top: 6px; padding: 8px; background: var(--zrap-ink);
+    border: 1px dashed var(--zrap-line); border-radius: 10px; color: #fff;
+  }
+  .btn {
+    background: var(--zrap-green); color: var(--zrap-ink); font-weight: 700;
+    padding: 10px 22px; border-radius: 22px; margin-top: 20px;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status { margin-top: 12px; font-size: 13px; color: var(--zrap-dim); min-height: 16px; }
+  .status.err { color: #ff5a5a; }
+  .status.ok { color: var(--zrap-green); }
+
+  .hero {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
+  }
+  .avatar {
+    width: 90px; height: 90px; border-radius: 50%; background: #333; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 36px;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 10px; background: var(--zrap-ink-3); color: var(--zrap-dim); font-size: 11px; margin-right: 6px; }
+
+  .chips { display: flex; gap: 8px; margin: 24px 0 16px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 14px; border-radius: 14px; background: var(--zrap-ink-2); font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .chip.active { background: var(--zrap-green); color: var(--zrap-ink); }
+
+  .track {
+    display: grid; grid-template-columns: 32px 1fr auto; gap: 14px; align-items: center;
+    padding: 10px 12px; border-radius: 8px; border-bottom: 1px solid var(--zrap-line);
+  }
+  .track .num { color: var(--zrap-dim); font-size: 13px; text-align: center; }
+  .track .tname { font-size: 14px; font-weight: 500; }
+  .track .tsub { font-size: 12px; color: var(--zrap-dim); }
+  .track .dur { font-size: 12px; color: var(--zrap-dim); }
+
+  .empty { padding: 20px; color: var(--zrap-dim); font-size: 14px; }
+  #loading { padding: 60px; text-align: center; color: var(--zrap-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="brand">zrap</a>
+  <a href="index.html" class="back">← Back to app</a>
+</header>
+
+<main>
+  <div id="loading">Loading…</div>
+  <div id="content" style="display:none"></div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getDatabase, ref, onValue, set, update, push, get } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { firebaseConfig, slug, escapeHtml, uploadToB2, readAudioDuration } from "./shared.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let currentUser = null;
+let userProfile = null;
+let myArtist = null;
+let myAlbums = [];
+let mySongs = [];
+let allDistributors = [];
+
+const content = document.getElementById('content');
+const loading = document.getElementById('loading');
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+  const pSnap = await get(ref(db, `users/${user.uid}/profile`));
+  userProfile = pSnap.exists() ? pSnap.val() : {};
+
+  onValue(ref(db, 'distributors'), snap => {
+    allDistributors = Object.entries(snap.val() || {}).map(([id, v]) => ({ id, ...v }));
+    render();
+  });
+
+  if (userProfile.artistId) {
+    onValue(ref(db, `artists/${userProfile.artistId}`), snap => {
+      myArtist = snap.exists() ? { id: userProfile.artistId, ...snap.val() } : null;
+      render();
+    });
+    onValue(ref(db, 'albums'), snap => {
+      const all = Object.entries(snap.val() || {}).map(([id, v]) => ({ id, ...v }));
+      myAlbums = all.filter(a => a.artistId === userProfile.artistId);
+      render();
+    });
+    onValue(ref(db, 'songs'), snap => {
+      const all = Object.entries(snap.val() || {}).map(([id, v]) => ({ id, ...v }));
+      mySongs = all.filter(s => s.artistId === userProfile.artistId);
+      render();
+    });
+  } else {
+    render();
+  }
+});
+
+let activeTab = 'upload';
+
+function render() {
+  loading.style.display = 'none';
+  content.style.display = 'block';
+
+  if (!myArtist) {
+    content.innerHTML = `
+      <h1>Artist studio</h1>
+      <div class="muted">Request an artist profile. Your distributor must approve it before you can upload.</div>
+      <div class="card">
+        <label>Artist name</label>
+        <input id="claim-name" placeholder="e.g. Kaimo" />
+        <label>Distributor (required)</label>
+        <select id="claim-dist">
+          <option value="">Choose a distributor…</option>
+          ${allDistributors.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('')}
+        </select>
+        ${allDistributors.length === 0 ? '<div class="muted" style="margin-top:8px; font-size:12px;">No distributors are registered yet. A distributor must sign up first before artists can request a profile.</div>' : ''}
+        <button class="btn" id="claim-btn">Submit request</button>
+        <div class="status err" id="claim-status"></div>
+      </div>
+    `;
+    document.getElementById('claim-btn').onclick = claimArtist;
+    return;
+  }
+
+  if (myArtist.status === 'pending') {
+    const dist = allDistributors.find(d => d.id === myArtist.distributorId);
+    content.innerHTML = `
+      <h1>${escapeHtml(myArtist.name)}</h1>
+      <div class="card">
+        <h2 style="margin-top:0">Waiting for approval</h2>
+        <div class="muted">Your request is sitting in ${dist ? escapeHtml(dist.name) : 'your distributor'}'s portal. You'll be able to upload music once they approve it.</div>
+        <div class="muted" style="margin-top:14px; font-size:12px;">Submitted ${new Date(myArtist.requestedAt || Date.now()).toLocaleString()}</div>
+        <button class="btn" id="cancel-request" style="background:#2a2a2a; color:#fff;">Cancel request</button>
+        <div class="status" id="cancel-status"></div>
+      </div>
+    `;
+    document.getElementById('cancel-request').onclick = cancelRequest;
+    return;
+  }
+
+  const dist = allDistributors.find(d => d.id === myArtist.distributorId);
+  content.innerHTML = `
+    <div class="hero">
+      <div class="avatar">${myArtist.photo ? `<img src="${escapeHtml(myArtist.photo)}">` : escapeHtml(myArtist.name[0].toUpperCase())}</div>
+      <div>
+        <div class="muted" style="text-transform:uppercase; letter-spacing:2px; font-size:11px;">Artist studio</div>
+        <h1>${escapeHtml(myArtist.name)}</h1>
+        <div style="margin-top:6px">
+          <span class="pill">${mySongs.length} songs</span>
+          <span class="pill">${myAlbums.length} albums</span>
+          <span class="pill">${dist ? escapeHtml(dist.name) : 'Independent'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chips">
+      <div class="chip ${activeTab === 'upload' ? 'active' : ''}" data-tab="upload">Upload</div>
+      <div class="chip ${activeTab === 'catalogue' ? 'active' : ''}" data-tab="catalogue">Catalogue</div>
+      <div class="chip ${activeTab === 'profile' ? 'active' : ''}" data-tab="profile">Profile</div>
+    </div>
+
+    <div id="tab-body"></div>
+  `;
+
+  document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    activeTab = c.dataset.tab;
+    render();
+  });
+
+  const body = document.getElementById('tab-body');
+  if (activeTab === 'upload') renderUpload(body);
+  else if (activeTab === 'catalogue') renderCatalogue(body);
+  else renderProfile(body);
+}
+
+function renderUpload(body) {
+  body.innerHTML = `
+    <h2>Upload a track</h2>
+    <div class="card">
+      <label>Audio file (mp3, wav, m4a)</label>
+      <input type="file" id="song-file" accept="audio/*" />
+      <label>Title</label>
+      <input id="song-title" type="text" placeholder="Track title" />
+      <label>Album</label>
+      <select id="song-album">
+        <option value="__single__">Single (no album)</option>
+        ${myAlbums.map(a => `<option value="${a.id}">${escapeHtml(a.title)}</option>`).join('')}
+        <option value="__new__">+ New album…</option>
+      </select>
+      <input id="new-album-title" type="text" placeholder="New album title" style="display:none; margin-top:8px;" />
+      <button class="btn" id="song-upload">Upload track</button>
+      <div class="status" id="upload-status"></div>
+    </div>
+  `;
+  const albumSel = document.getElementById('song-album');
+  albumSel.onchange = () => {
+    document.getElementById('new-album-title').style.display = albumSel.value === '__new__' ? 'block' : 'none';
+  };
+  document.getElementById('song-upload').onclick = uploadSong;
+}
+
+function renderCatalogue(body) {
+  if (!mySongs.length) {
+    body.innerHTML = `<h2>Your catalogue</h2><div class="empty">You haven't uploaded anything yet.</div>`;
+    return;
+  }
+  body.innerHTML = `
+    <h2>Your catalogue</h2>
+    <div>${mySongs.map((s, i) => {
+      const al = myAlbums.find(a => a.id === s.albumId);
+      return `
+        <div class="track">
+          <div class="num">${i + 1}</div>
+          <div>
+            <div class="tname">${escapeHtml(s.title)}</div>
+            <div class="tsub">${al ? escapeHtml(al.title) : 'Single'}</div>
+          </div>
+          <div class="dur">${fmtTime(s.duration || 0)}</div>
+        </div>
+      `;
+    }).join('')}</div>
+  `;
+}
+
+function renderProfile(body) {
+  body.innerHTML = `
+    <h2>Profile</h2>
+    <div class="card">
+      <label>Artist name</label>
+      <input id="prof-name" type="text" value="${escapeHtml(myArtist.name)}" />
+      <label>Distributor</label>
+      <select id="prof-dist" disabled title="To change distributor, cancel and resubmit">
+        ${allDistributors.map(d => `<option value="${d.id}" ${d.id === myArtist.distributorId ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('')}
+      </select>
+      <div class="muted" style="font-size:11px; margin-top:4px;">Switching distributors requires their re-approval.</div>
+      <label>Profile photo</label>
+      <input type="file" id="prof-photo" accept="image/*" />
+      <button class="btn" id="prof-save">Save</button>
+      <div class="status" id="prof-status"></div>
+    </div>
+  `;
+  document.getElementById('prof-save').onclick = saveProfile;
+}
+
+async function claimArtist() {
+  const name = document.getElementById('claim-name').value.trim();
+  const distId = document.getElementById('claim-dist').value;
+  const status = document.getElementById('claim-status');
+  status.textContent = '';
+  if (!name) { status.textContent = 'Pick a name.'; return; }
+  if (!distId) { status.textContent = 'Pick a distributor.'; return; }
+  const artistId = slug(name);
+  if (!artistId) { status.textContent = 'Name needs letters.'; return; }
+  const exists = await get(ref(db, `artists/${artistId}`));
+  if (exists.exists()) { status.textContent = 'That name is taken, try another.'; return; }
+  const data = {
+    name, photo: '', ownerUid: currentUser.uid,
+    distributorId: distId, status: 'pending',
+    requestedAt: Date.now()
+  };
+  await set(ref(db, `artists/${artistId}`), data);
+  await update(ref(db, `users/${currentUser.uid}/profile`), { role: 'artist', artistId });
+  userProfile.role = 'artist';
+  userProfile.artistId = artistId;
+  myArtist = { id: artistId, ...data };
+  render();
+  // Start listening for albums/songs now that we have an artistId
+  onValue(ref(db, `artists/${artistId}`), snap => {
+    myArtist = snap.exists() ? { id: artistId, ...snap.val() } : null; render();
+  });
+  onValue(ref(db, 'albums'), snap => {
+    const all = Object.entries(snap.val() || {}).map(([id, v]) => ({ id, ...v }));
+    myAlbums = all.filter(a => a.artistId === artistId); render();
+  });
+  onValue(ref(db, 'songs'), snap => {
+    const all = Object.entries(snap.val() || {}).map(([id, v]) => ({ id, ...v }));
+    mySongs = all.filter(s => s.artistId === artistId); render();
+  });
+}
+
+async function uploadSong() {
+  const status = document.getElementById('upload-status');
+  const btn = document.getElementById('song-upload');
+  const file = document.getElementById('song-file').files[0];
+  const title = document.getElementById('song-title').value.trim();
+  const albumSel = document.getElementById('song-album').value;
+  const newAlbumTitle = document.getElementById('new-album-title').value.trim();
+  status.className = 'status';
+  if (!file) { status.textContent = 'Pick a file first.'; status.className = 'status err'; return; }
+  if (!title) { status.textContent = 'Give it a title.'; status.className = 'status err'; return; }
+  btn.disabled = true;
+  try {
+    status.textContent = 'Uploading to Backblaze…';
+    const url = await uploadToB2(file, `music/${myArtist.id}`);
+    status.textContent = 'Reading duration…';
+    const duration = await readAudioDuration(file);
+
+    let albumId = null;
+    if (albumSel === '__new__' && newAlbumTitle) {
+      albumId = slug(newAlbumTitle) + '-' + myArtist.id;
+      await set(ref(db, `albums/${albumId}`), {
+        title: newAlbumTitle, artistId: myArtist.id, cover: '', createdAt: Date.now()
+      });
+    } else if (albumSel !== '__single__') {
+      albumId = albumSel;
+    }
+
+    const songRef = push(ref(db, 'songs'));
+    await set(songRef, {
+      title, artistId: myArtist.id, albumId, duration, url, createdAt: Date.now()
+    });
+    status.className = 'status ok';
+    status.textContent = '✓ Uploaded. Listeners can hear it now.';
+    document.getElementById('song-title').value = '';
+    document.getElementById('song-file').value = '';
+    document.getElementById('new-album-title').value = '';
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = 'Error: ' + e.message;
+  } finally { btn.disabled = false; }
+}
+
+async function cancelRequest() {
+  const status = document.getElementById('cancel-status');
+  if (!confirm('Cancel this artist request? The name will be freed.')) return;
+  status.textContent = 'Cancelling…';
+  try {
+    await set(ref(db, `artists/${myArtist.id}`), null);
+    await update(ref(db, `users/${currentUser.uid}/profile`), { role: 'listener', artistId: null });
+    window.location.reload();
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function saveProfile() {
+  const status = document.getElementById('prof-status');
+  const btn = document.getElementById('prof-save');
+  const name = document.getElementById('prof-name').value.trim();
+  const photoFile = document.getElementById('prof-photo').files[0];
+  status.className = 'status';
+  if (!name) { status.textContent = 'Name required.'; status.className = 'status err'; return; }
+  btn.disabled = true;
+  try {
+    const patch = { name };
+    if (photoFile) {
+      status.textContent = 'Uploading photo…';
+      patch.photo = await uploadToB2(photoFile, `avatars/${myArtist.id}`);
+    }
+    await update(ref(db, `artists/${myArtist.id}`), patch);
+    status.className = 'status ok';
+    status.textContent = '✓ Saved.';
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = 'Error: ' + e.message;
+  } finally { btn.disabled = false; }
+}
+
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+</script>
+</body>
+</html>

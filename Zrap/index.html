@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zrap</title>
+<style>
+  :root {
+    --zrap-green: #B6FF3C;
+    --zrap-ink: #0a0a0a;
+    --zrap-ink-2: #141414;
+    --zrap-ink-3: #1d1d1d;
+    --zrap-dim: #8a8a8a;
+    --zrap-dim-2: #5a5a5a;
+    --zrap-line: #262626;
+    --zrap-accent-dark: #2d4600;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--zrap-ink);
+    color: #f2f2f2;
+    font-family: -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input { font: inherit; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- Login ---------- */
+  #login {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--zrap-ink); z-index: 100;
+  }
+  .login-card {
+    background: var(--zrap-ink-2); border: 1px solid var(--zrap-line);
+    border-radius: 20px; padding: 36px 32px; width: 360px;
+  }
+  .login-card h1 {
+    margin: 0 0 4px; font-size: 36px; font-weight: 800; letter-spacing: -1px;
+    color: var(--zrap-green); font-style: italic;
+  }
+  .login-card .sub { color: var(--zrap-dim); font-size: 13px; margin-bottom: 24px; }
+  .login-card label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--zrap-dim); margin: 14px 0 6px; }
+  .login-card input {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--zrap-line);
+    background: var(--zrap-ink); color: #fff; outline: none;
+  }
+  .login-card input:focus { border-color: var(--zrap-green); }
+  .login-card .btn-primary {
+    width: 100%; margin-top: 20px; padding: 12px; background: var(--zrap-green); color: var(--zrap-ink);
+    font-weight: 700; border-radius: 12px;
+  }
+  .login-card .btn-ghost { width: 100%; margin-top: 8px; padding: 10px; color: var(--zrap-dim); font-size: 13px; }
+  .login-card .err { color: #ff5a5a; font-size: 12px; margin-top: 10px; min-height: 14px; }
+
+  /* ---------- App shell ---------- */
+  #app { display: none; grid-template-columns: 240px 1fr; grid-template-rows: 1fr 88px; height: 100vh; }
+  #app.show { display: grid; }
+
+  /* Sidebar */
+  .sidebar {
+    grid-row: 1 / 2; background: var(--zrap-ink-2); border-right: 1px solid var(--zrap-line);
+    padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto;
+  }
+  .brand {
+    font-size: 32px; font-weight: 800; font-style: italic; letter-spacing: -1.5px;
+    color: var(--zrap-green); padding: 0 8px 20px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+    color: var(--zrap-dim); font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .nav-item:hover { color: #fff; background: rgba(255,255,255,.04); }
+  .nav-item.active { color: var(--zrap-green); background: rgba(182,255,60,.08); }
+  .nav-item svg { width: 20px; height: 20px; }
+
+  .nav-section { color: var(--zrap-dim-2); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 20px 12px 8px; }
+
+  .playlist-item {
+    padding: 8px 12px; border-radius: 8px; color: var(--zrap-dim); font-size: 13px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .playlist-item:hover { color: #fff; }
+
+  .sidebar-links {
+    margin-top: auto; display: flex; gap: 8px; align-items: center;
+    padding: 14px 12px 4px;
+  }
+  .side-link { font-size: 12px; color: var(--zrap-dim); cursor: pointer; }
+  .side-link:hover { color: var(--zrap-green); }
+  .side-sep { color: var(--zrap-dim-2); font-size: 12px; }
+
+  .sidebar-footer {
+    padding: 12px; display: flex; align-items: center; gap: 10px;
+    border-top: 1px solid var(--zrap-line); margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--zrap-green); color: var(--zrap-ink);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; overflow: hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .sidebar-footer .uname { flex: 1; font-size: 13px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar-footer button { color: var(--zrap-dim); font-size: 11px; }
+  .sidebar-footer button:hover { color: #fff; }
+
+  /* Main */
+  .main {
+    grid-row: 1 / 2; background: var(--zrap-ink); overflow-y: auto; padding: 28px 36px 40px;
+  }
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .search-wrap { flex: 1; max-width: 480px; position: relative; }
+  .search-wrap input {
+    width: 100%; padding: 10px 14px 10px 38px; background: var(--zrap-ink-2);
+    border: 1px solid var(--zrap-line); border-radius: 20px; color: #fff; outline: none;
+  }
+  .search-wrap input:focus { border-color: var(--zrap-green); }
+  .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--zrap-dim); }
+
+  h2 { margin: 0 0 16px; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+  h3 { margin: 24px 0 14px; font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .muted { color: var(--zrap-dim); font-size: 13px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--zrap-ink-2); border-radius: 12px; padding: 14px; cursor: pointer; transition: background .15s;
+  }
+  .card:hover { background: var(--zrap-ink-3); }
+  .card .art {
+    aspect-ratio: 1; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-weight: 700; font-style: italic; font-size: 32px; color: var(--zrap-ink);
+    background: var(--zrap-green); overflow: hidden; position: relative;
+  }
+  .card .art img { width: 100%; height: 100%; object-fit: cover; }
+  .card .title { font-size: 14px; font-weight: 600; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .sub { font-size: 12px; color: var(--zrap-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Track list */
+  .track-list { display: flex; flex-direction: column; gap: 2px; }
+  .track {
+    display: grid; grid-template-columns: 32px 1fr auto auto; gap: 14px; align-items: center;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  }
+  .track:hover { background: rgba(255,255,255,.04); }
+  .track.playing { color: var(--zrap-green); }
+  .track .num { color: var(--zrap-dim); font-size: 13px; text-align: center; }
+  .track .meta { min-width: 0; }
+  .track .tname { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track .tartist { font-size: 12px; color: var(--zrap-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track .dur { font-size: 12px; color: var(--zrap-dim); }
+  .track .add { color: var(--zrap-dim); opacity: 0; }
+  .track:hover .add { opacity: 1; }
+
+  /* Album detail */
+  .album-hero { display: flex; gap: 24px; margin-bottom: 28px; align-items: flex-end; }
+  .album-hero .art {
+    width: 220px; height: 220px; border-radius: 10px; background: var(--zrap-green);
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-weight: 700; font-style: italic; font-size: 72px; color: var(--zrap-ink);
+    overflow: hidden; flex-shrink: 0;
+  }
+  .album-hero .art img { width: 100%; height: 100%; object-fit: cover; }
+  .album-hero h1 { margin: 0; font-size: 48px; font-weight: 800; letter-spacing: -1.5px; }
+  .album-hero .meta { color: var(--zrap-dim); font-size: 13px; margin-top: 6px; }
+  .album-actions { display: flex; gap: 10px; margin: 20px 0 24px; }
+  .btn-play {
+    background: var(--zrap-green); color: var(--zrap-ink); font-weight: 700; padding: 10px 22px;
+    border-radius: 22px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-outline {
+    border: 1px solid var(--zrap-line); padding: 10px 18px; border-radius: 22px; color: #fff;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-outline:hover { border-color: #fff; }
+
+  /* Player bar */
+  .player {
+    grid-column: 1 / 3; grid-row: 2 / 3; background: var(--zrap-ink-2); border-top: 1px solid var(--zrap-line);
+    display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; padding: 0 24px; gap: 24px;
+  }
+  .np-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .np-art {
+    width: 56px; height: 56px; border-radius: 6px; background: var(--zrap-green); flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-style: italic; font-weight: 700; color: var(--zrap-ink);
+  }
+  .np-art img { width: 100%; height: 100%; object-fit: cover; }
+  .np-info { min-width: 0; }
+  .np-title { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-artist { font-size: 12px; color: var(--zrap-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-like { color: var(--zrap-dim); margin-left: 8px; }
+  .np-like.liked { color: var(--zrap-green); }
+
+  .np-center { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .np-controls { display: flex; align-items: center; gap: 20px; }
+  .np-controls button { color: var(--zrap-dim); display: flex; }
+  .np-controls button:hover { color: #fff; }
+  .np-play {
+    width: 40px; height: 40px; background: var(--zrap-green); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: var(--zrap-ink) !important;
+  }
+  .np-play:hover { transform: scale(1.05); }
+
+  .np-scrub { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 520px; }
+  .np-scrub .t { font-size: 11px; color: var(--zrap-dim); font-variant-numeric: tabular-nums; min-width: 36px; }
+  .np-scrub .t.right { text-align: right; }
+  .progress {
+    flex: 1; height: 4px; background: #2a2a2a; border-radius: 2px; position: relative; cursor: pointer;
+  }
+  .progress .fill { height: 100%; background: #fff; border-radius: 2px; width: 0; pointer-events: none; }
+  .progress:hover .fill { background: var(--zrap-green); }
+
+  .np-right { display: flex; align-items: center; justify-content: flex-end; gap: 14px; color: var(--zrap-dim); }
+  .np-right button:hover { color: #fff; }
+  .vol { width: 90px; height: 4px; background: #2a2a2a; border-radius: 2px; position: relative; cursor: pointer; }
+  .vol .fill { height: 100%; background: #fff; border-radius: 2px; width: 70%; }
+
+  .empty { padding: 40px; text-align: center; color: var(--zrap-dim); }
+
+  /* Chip row */
+  .chips { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 14px; border-radius: 14px; background: var(--zrap-ink-2); font-size: 12px; font-weight: 500; cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .chip.active { background: var(--zrap-green); color: var(--zrap-ink); }
+  .chip:hover:not(.active) { background: var(--zrap-ink-3); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="login">
+  <div class="login-card">
+    <h1>zrap</h1>
+    <div class="sub" id="login-sub">Sign in to start listening</div>
+
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="email" />
+    <label>Password</label>
+    <input id="password" type="password" autocomplete="current-password" />
+    <label id="dname-label" style="display:none">Display name</label>
+    <input id="dname" type="text" style="display:none" />
+
+    <div class="err" id="login-err"></div>
+    <button class="btn-primary" id="login-btn">Sign in</button>
+    <button class="btn-ghost" id="toggle-mode">New here? Create an account</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">zrap</div>
+    <div class="nav-item active" data-route="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V11z"/></svg>
+      Home
+    </div>
+    <div class="nav-item" data-route="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Search
+    </div>
+    <div class="nav-item" data-route="library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h4v16H4zM10 4h4v16h-4zM17 5l4 15"/></svg>
+      Library
+    </div>
+    <div class="nav-item" data-route="artists">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+      Artists
+    </div>
+
+    <div class="nav-section">Playlists</div>
+    <div id="pl-list"></div>
+    <div class="nav-item" id="new-playlist" style="color: var(--zrap-green)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      New playlist
+    </div>
+
+    <div class="sidebar-links">
+      <a href="artists.html" class="side-link">For artists</a>
+      <span class="side-sep">·</span>
+      <a href="distributors.html" class="side-link">For distributors</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="avatar" id="me-avatar">Z</div>
+      <div class="uname" id="me-name">You</div>
+      <button id="logout">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main"></main>
+
+  <!-- Player -->
+  <div class="player">
+    <div class="np-left">
+      <div class="np-art" id="np-art">z</div>
+      <div class="np-info">
+        <div class="np-title" id="np-title">Nothing playing</div>
+        <div class="np-artist" id="np-artist">Pick a track</div>
+      </div>
+      <button class="np-like" id="np-like" title="Like">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6C19 16.5 12 21 12 21z"/></svg>
+      </button>
+    </div>
+
+    <div class="np-center">
+      <div class="np-controls">
+        <button id="btn-shuffle" title="Shuffle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+        <button id="btn-prev" title="Previous"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zm3 7 10-7v14z"/></svg></button>
+        <button class="np-play" id="btn-play"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" id="play-icon"><path d="M8 5v14l11-7z"/></svg></button>
+        <button id="btn-next" title="Next"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/></svg></button>
+        <button id="btn-repeat" title="Repeat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+      </div>
+      <div class="np-scrub">
+        <span class="t" id="t-cur">0:00</span>
+        <div class="progress" id="progress"><div class="fill" id="pfill"></div></div>
+        <span class="t right" id="t-dur">0:00</span>
+      </div>
+    </div>
+
+    <div class="np-right">
+      <button title="Queue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h10M18 16v6M18 22l-3-3M18 22l3-3"/></svg></button>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H2v6h4l5 4zM19 12a4 4 0 0 0-2-3.5"/></svg>
+      <div class="vol" id="vol"><div class="fill" id="vfill"></div></div>
+    </div>
+  </div>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut, updateProfile
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  getDatabase, ref, onValue, set, update, push, get, child
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+// ---------- Firebase ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyD14yOD1kKFDXvN9WhvfB0IoC6lIMhmCVs",
+  authDomain: "cinefy-9db6e.firebaseapp.com",
+  databaseURL: "https://cinefy-9db6e-default-rtdb.firebaseio.com",
+  projectId: "cinefy-9db6e",
+  storageBucket: "cinefy-9db6e.firebasestorage.app",
+  messagingSenderId: "698858771874",
+  appId: "1:698858771874:web:428cb1cdedbb697aa5cefb",
+  measurementId: "G-FP92XFY368"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ---------- State ----------
+let currentUser = null;
+let userProfile = null;
+let allSongs = [];     // [{id, title, artist, artistId, albumId, albumTitle, duration, url, cover}]
+let allAlbums = [];    // [{id, title, artist, artistId, cover, songIds[]}]
+let allArtists = [];   // [{id, name, photo, distributorId}]
+let allDistributors = []; // [{id, name, logo, website}]
+let myPlaylists = [];  // [{id, name, songIds[]}]
+let likedIds = new Set();
+
+let queue = [];
+let queueIndex = -1;
+let currentTrack = null;
+const audio = document.getElementById('audio');
+audio.volume = 0.7;
+
+
+// ---------- Auth UI ----------
+const loginEl = document.getElementById('login');
+const appEl = document.getElementById('app');
+const emailI = document.getElementById('email');
+const passI = document.getElementById('password');
+const dnameI = document.getElementById('dname');
+const dnameL = document.getElementById('dname-label');
+const errEl = document.getElementById('login-err');
+const loginBtn = document.getElementById('login-btn');
+const toggleBtn = document.getElementById('toggle-mode');
+const loginSub = document.getElementById('login-sub');
+
+let isSignup = false;
+toggleBtn.onclick = () => {
+  isSignup = !isSignup;
+  dnameI.style.display = dnameL.style.display = isSignup ? 'block' : 'none';
+  loginBtn.textContent = isSignup ? 'Create account' : 'Sign in';
+  toggleBtn.textContent = isSignup ? 'Already have an account? Sign in' : 'New here? Create an account';
+  loginSub.textContent = isSignup ? 'Pick a name, you can change it later' : 'Sign in to start listening';
+  errEl.textContent = '';
+};
+
+loginBtn.onclick = async () => {
+  errEl.textContent = '';
+  const email = emailI.value.trim();
+  const pass = passI.value;
+  if (!email || !pass) { errEl.textContent = 'Email and password required.'; return; }
+  try {
+    if (isSignup) {
+      const name = dnameI.value.trim() || email.split('@')[0];
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      await set(ref(db, `users/${cred.user.uid}/profile`), {
+        name, email, photo: "", createdAt: Date.now()
+      });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (e) {
+    errEl.textContent = humanErr(e);
+  }
+};
+
+function humanErr(e) {
+  const c = (e && e.code) || '';
+  if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'Email or password is wrong.';
+  if (c.includes('email-already-in-use')) return 'That email is already registered.';
+  if (c.includes('weak-password')) return 'Password needs 6+ characters.';
+  if (c.includes('invalid-email')) return 'That email looks invalid.';
+  if (c.includes('network-request-failed')) return 'Network error. Check your connection.';
+  return (e && e.message) || 'Something went wrong.';
+}
+
+document.getElementById('logout').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (!user) {
+    loginEl.style.display = 'flex';
+    appEl.classList.remove('show');
+    return;
+  }
+  loginEl.style.display = 'none';
+  appEl.classList.add('show');
+  await loadUserProfile();
+  bindLibrary();
+  loadCatalogue();
+  renderRoute('home');
+});
+
+async function loadUserProfile() {
+  const snap = await get(ref(db, `users/${currentUser.uid}/profile`));
+  userProfile = snap.exists() ? snap.val() : { name: currentUser.displayName || "You", photo: "" };
+  const av = document.getElementById('me-avatar');
+  if (userProfile.photo) {
+    av.innerHTML = `<img src="${userProfile.photo}" alt="">`;
+  } else {
+    av.textContent = (userProfile.name || "Z").trim()[0].toUpperCase();
+  }
+  document.getElementById('me-name').textContent = userProfile.name || "You";
+}
+
+// ---------- Catalogue ----------
+function loadCatalogue() {
+  onValue(ref(db, 'artists'), snap => {
+    const data = snap.val() || {};
+    // Hide pending (unapproved) artists from the public listener app
+    allArtists = Object.entries(data)
+      .filter(([_, v]) => v.status !== 'pending')
+      .map(([id, v]) => ({ id, ...v }));
+    reindex();
+    rerenderIfRoute(['home', 'artists', 'artist', 'search']);
+  });
+  onValue(ref(db, 'albums'), snap => {
+    const data = snap.val() || {};
+    allAlbums = Object.entries(data).map(([id, v]) => ({ id, ...v, songIds: [] }));
+    reindex();
+    rerenderIfRoute(['home', 'album', 'artist', 'search']);
+  });
+  onValue(ref(db, 'songs'), snap => {
+    const data = snap.val() || {};
+    allSongs = Object.entries(data).map(([id, v]) => ({ id, ...v }));
+    reindex();
+    rerenderIfRoute();
+  });
+  onValue(ref(db, 'distributors'), snap => {
+    const data = snap.val() || {};
+    allDistributors = Object.entries(data).map(([id, v]) => ({ id, ...v }));
+    rerenderIfRoute(['for-distributors', 'distributor']);
+  });
+}
+
+function rerenderIfRoute(routes) {
+  const r = document.querySelector('.nav-item.active')?.dataset.route;
+  if (!r) return;
+  if (!routes || routes.includes(r)) renderRoute(r, currentRouteParam);
+}
+
+function reindex() {
+  const artistMap = Object.fromEntries(allArtists.map(a => [a.id, a]));
+  const albumMap = Object.fromEntries(allAlbums.map(a => [a.id, a]));
+  allAlbums.forEach(a => a.songIds = []);
+  allSongs.forEach(s => {
+    const al = albumMap[s.albumId];
+    if (al) { s.albumTitle = al.title; al.songIds.push(s.id); }
+    const ar = artistMap[s.artistId];
+    if (ar) s.artist = ar.name;
+    if (al && !s.cover) s.cover = al.cover || "";
+  });
+}
+
+function bindLibrary() {
+  const uid = currentUser.uid;
+  onValue(ref(db, `users/${uid}/liked`), snap => {
+    likedIds = new Set(Object.keys(snap.val() || {}));
+    updateLikeIcon();
+    const r = document.querySelector('.nav-item.active')?.dataset.route;
+    if (r === 'library') renderRoute('library');
+  });
+  onValue(ref(db, `users/${uid}/playlists`), snap => {
+    const data = snap.val() || {};
+    myPlaylists = Object.entries(data).map(([id, v]) => ({ id, ...v, songIds: Object.keys(v.songIds || {}) }));
+    renderPlaylistSidebar();
+  });
+}
+
+function renderPlaylistSidebar() {
+  const el = document.getElementById('pl-list');
+  el.innerHTML = myPlaylists.map(p =>
+    `<div class="playlist-item" data-pid="${p.id}">${escapeHtml(p.name)}</div>`
+  ).join('');
+  el.querySelectorAll('.playlist-item').forEach(it => {
+    it.onclick = () => renderRoute('playlist', it.dataset.pid);
+  });
+}
+
+document.getElementById('new-playlist').onclick = async () => {
+  const name = prompt('Playlist name');
+  if (!name) return;
+  const uid = currentUser.uid;
+  const r = push(ref(db, `users/${uid}/playlists`));
+  await set(r, { name, createdAt: Date.now() });
+};
+
+// ---------- Routing ----------
+let currentRouteParam = null;
+document.querySelectorAll('.nav-item[data-route], .side-link[data-route]').forEach(n => {
+  n.onclick = (e) => { e.preventDefault(); renderRoute(n.dataset.route); };
+});
+
+function renderRoute(route, param = null) {
+  currentRouteParam = param;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.querySelector(`.nav-item[data-route="${route}"]`);
+  if (navEl) navEl.classList.add('active');
+
+  const main = document.getElementById('main');
+  if (route === 'home') main.innerHTML = viewHome();
+  else if (route === 'search') main.innerHTML = viewSearch();
+  else if (route === 'library') main.innerHTML = viewLibrary();
+  else if (route === 'artists') main.innerHTML = viewBrowseArtists();
+  else if (route === 'album') main.innerHTML = viewAlbum(param);
+  else if (route === 'artist') main.innerHTML = viewArtist(param);
+  else if (route === 'distributor') main.innerHTML = viewDistributor(param);
+  else if (route === 'playlist') main.innerHTML = viewPlaylist(param);
+  attachMainHandlers();
+}
+
+// ---------- Views ----------
+function viewHome() {
+  const feat = allAlbums.slice(0, 6);
+  const artists = allArtists.slice(0, 6);
+  return `
+    <div class="topbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input placeholder="Search tracks, artists, albums" id="home-search"/>
+      </div>
+    </div>
+    <h2>Good ${timeGreeting()}, ${escapeHtml(userProfile?.name || 'you')}</h2>
+    <h3>Featured albums</h3>
+    <div class="grid">${feat.map(albumCard).join('') || empty('No albums yet.')}</div>
+    <h3>Artists</h3>
+    <div class="grid">${artists.map(artistCard).join('') || empty('No artists yet.')}</div>
+  `;
+}
+
+function viewSearch() {
+  return `
+    <div class="topbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input placeholder="What do you want to hear?" id="search-input" autofocus/>
+      </div>
+    </div>
+    <div id="search-results"><div class="empty">Start typing to search.</div></div>
+  `;
+}
+
+function viewLibrary() {
+  const liked = allSongs.filter(s => likedIds.has(s.id));
+  return `
+    <h2>Your library</h2>
+    <div class="chips">
+      <div class="chip active">Liked</div>
+      <div class="chip">Playlists</div>
+    </div>
+    <h3>Liked songs <span class="muted">(${liked.length})</span></h3>
+    ${trackListHtml(liked, { showNum: true })}
+    <h3>Playlists</h3>
+    <div class="grid">
+      ${myPlaylists.map(p => `
+        <div class="card" data-pid="${p.id}">
+          <div class="art">${escapeHtml((p.name || "?")[0] || "?").toLowerCase()}</div>
+          <div class="title">${escapeHtml(p.name)}</div>
+          <div class="sub">${p.songIds.length} songs</div>
+        </div>
+      `).join('') || empty('No playlists yet.')}
+    </div>
+  `;
+}
+
+function viewAlbum(id) {
+  const al = allAlbums.find(a => a.id === id);
+  if (!al) return empty('Album not found.');
+  const artist = allArtists.find(a => a.id === al.artistId);
+  const songs = al.songIds.map(sid => allSongs.find(s => s.id === sid)).filter(Boolean);
+  const totalSec = songs.reduce((n, s) => n + (s.duration || 0), 0);
+  return `
+    <div class="album-hero">
+      <div class="art">${al.cover ? `<img src="${escapeAttr(al.cover)}">` : escapeHtml((al.title || '?')[0].toLowerCase())}</div>
+      <div>
+        <div class="muted" style="text-transform:uppercase; letter-spacing:2px; font-size:11px;">Album</div>
+        <h1>${escapeHtml(al.title)}</h1>
+        <div class="meta">${escapeHtml(artist?.name || "Unknown")} · ${songs.length} songs · ${fmtTotal(totalSec)}</div>
+      </div>
+    </div>
+    <div class="album-actions">
+      <button class="btn-play" data-play-album="${al.id}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Play
+      </button>
+      <button class="btn-outline" data-shuffle-album="${al.id}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg> Shuffle
+      </button>
+    </div>
+    ${trackListHtml(songs, { showNum: true, albumId: al.id })}
+  `;
+}
+
+function viewArtist(id) {
+  const ar = allArtists.find(a => a.id === id);
+  if (!ar) return empty('Artist not found.');
+  const albums = allAlbums.filter(a => a.artistId === id);
+  const top = allSongs.filter(s => s.artistId === id).slice(0, 5);
+  return `
+    <div class="album-hero">
+      <div class="art" style="border-radius:50%; background:#333">${ar.photo ? `<img src="${escapeAttr(ar.photo)}">` : escapeHtml((ar.name || '?')[0].toUpperCase())}</div>
+      <div>
+        <div class="muted" style="text-transform:uppercase; letter-spacing:2px; font-size:11px;">Artist</div>
+        <h1>${escapeHtml(ar.name)}</h1>
+      </div>
+    </div>
+    <h3>Popular</h3>
+    ${trackListHtml(top, { showNum: true })}
+    <h3>Albums</h3>
+    <div class="grid">${albums.map(albumCard).join('') || empty('No albums.')}</div>
+  `;
+}
+
+// ---------- Browse artists (discover) ----------
+function viewBrowseArtists() {
+  return `
+    <div class="topbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input placeholder="Search artists by name" id="artist-search"/>
+      </div>
+    </div>
+    <h2>Artists</h2>
+    <div class="muted" style="margin-bottom:20px">${allArtists.length} on Zrap</div>
+    <h3>Discover new artists</h3>
+    <div class="grid" id="new-artists-grid">${
+      [...allArtists].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 6).map(artistCard).join('')
+      || empty('No artists yet. Be the first — see "For artists" at the bottom of the sidebar.')
+    }</div>
+    <h3>All artists</h3>
+    <div class="grid" id="all-artists-grid">${
+      [...allArtists].sort((a, b) => a.name.localeCompare(b.name)).map(artistCard).join('')
+      || empty('No artists yet.')
+    }</div>
+  `;
+}
+
+function viewDistributor(id) {
+  const d = allDistributors.find(x => x.id === id);
+  if (!d) return empty('Distributor not found.');
+  const artists = allArtists.filter(a => a.distributorId === id);
+  return `
+    <div class="album-hero">
+      <div class="art" style="background:#1d1d1d; color:var(--zrap-green)">${d.logo ? `<img src="${escapeAttr(d.logo)}">` : escapeHtml((d.name || '?')[0].toUpperCase())}</div>
+      <div>
+        <div class="muted" style="text-transform:uppercase; letter-spacing:2px; font-size:11px;">Distributor</div>
+        <h1>${escapeHtml(d.name)}</h1>
+        ${d.website ? `<div class="meta"><a href="${escapeAttr(d.website)}" target="_blank" style="color:var(--zrap-green)">${escapeHtml(d.website)}</a></div>` : ''}
+      </div>
+    </div>
+    <h3>Artists</h3>
+    <div class="grid">${artists.map(artistCard).join('') || empty('No artists on this distributor yet.')}</div>
+  `;
+}
+
+function distributorCard(d) {
+  const count = allArtists.filter(a => a.distributorId === d.id).length;
+  return `
+    <div class="card" data-did="${d.id}">
+      <div class="art" style="background:#1d1d1d; color:var(--zrap-green); font-size:28px">${d.logo ? `<img src="${escapeAttr(d.logo)}">` : escapeHtml((d.name || '?')[0].toUpperCase())}</div>
+      <div class="title">${escapeHtml(d.name)}</div>
+      <div class="sub">${count} ${count === 1 ? 'artist' : 'artists'}</div>
+    </div>`;
+}
+
+function viewPlaylist(id) {
+  const pl = myPlaylists.find(p => p.id === id);
+  if (!pl) return empty('Playlist not found.');
+  const songs = pl.songIds.map(sid => allSongs.find(s => s.id === sid)).filter(Boolean);
+  return `
+    <div class="album-hero">
+      <div class="art">${escapeHtml((pl.name || '?')[0].toLowerCase())}</div>
+      <div>
+        <div class="muted" style="text-transform:uppercase; letter-spacing:2px; font-size:11px;">Playlist</div>
+        <h1>${escapeHtml(pl.name)}</h1>
+        <div class="meta">${songs.length} songs</div>
+      </div>
+    </div>
+    ${trackListHtml(songs, { showNum: true })}
+  `;
+}
+
+// ---------- Cards & tracks ----------
+function albumCard(al) {
+  const artist = allArtists.find(a => a.id === al.artistId);
+  return `
+    <div class="card" data-aid="${al.id}">
+      <div class="art">${al.cover ? `<img src="${escapeAttr(al.cover)}">` : escapeHtml((al.title || '?')[0].toLowerCase())}</div>
+      <div class="title">${escapeHtml(al.title)}</div>
+      <div class="sub">${escapeHtml(artist?.name || "")}</div>
+    </div>`;
+}
+function artistCard(ar) {
+  return `
+    <div class="card" data-arid="${ar.id}">
+      <div class="art" style="border-radius:50%; background:#333; color:#fff">${ar.photo ? `<img src="${escapeAttr(ar.photo)}">` : escapeHtml((ar.name || '?')[0].toUpperCase())}</div>
+      <div class="title">${escapeHtml(ar.name)}</div>
+      <div class="sub">Artist</div>
+    </div>`;
+}
+
+function trackListHtml(songs, { showNum = true } = {}) {
+  if (!songs.length) return empty('No songs here yet.');
+  return `<div class="track-list">${songs.map((s, i) => `
+    <div class="track ${currentTrack?.id === s.id ? 'playing' : ''}" data-sid="${s.id}">
+      <div class="num">${showNum ? i + 1 : '♪'}</div>
+      <div class="meta">
+        <div class="tname">${escapeHtml(s.title)}</div>
+        <div class="tartist">${escapeHtml(s.artist || "")}${s.albumTitle ? ' · ' + escapeHtml(s.albumTitle) : ''}</div>
+      </div>
+      <button class="add" data-like="${s.id}" title="Like">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="${likedIds.has(s.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6C19 16.5 12 21 12 21z"/></svg>
+      </button>
+      <div class="dur">${fmtTime(s.duration || 0)}</div>
+    </div>`).join('')}</div>`;
+}
+
+// ---------- Handlers ----------
+function attachMainHandlers() {
+  document.querySelectorAll('.card[data-aid]').forEach(c => c.onclick = () => renderRoute('album', c.dataset.aid));
+  document.querySelectorAll('.card[data-arid]').forEach(c => c.onclick = () => renderRoute('artist', c.dataset.arid));
+  document.querySelectorAll('.card[data-pid]').forEach(c => c.onclick = () => renderRoute('playlist', c.dataset.pid));
+  document.querySelectorAll('.card[data-did]').forEach(c => c.onclick = () => renderRoute('distributor', c.dataset.did));
+
+  document.querySelectorAll('.track').forEach(t => {
+    t.onclick = (e) => {
+      if (e.target.closest('[data-like]')) return;
+      const sid = t.dataset.sid;
+      const list = Array.from(t.parentElement.querySelectorAll('.track')).map(x => x.dataset.sid);
+      playTrack(sid, list);
+    };
+  });
+  document.querySelectorAll('[data-like]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    toggleLike(b.dataset.like);
+  });
+  document.querySelectorAll('[data-play-album]').forEach(b => b.onclick = () => {
+    const al = allAlbums.find(a => a.id === b.dataset.playAlbum);
+    if (al && al.songIds.length) playTrack(al.songIds[0], al.songIds);
+  });
+  document.querySelectorAll('[data-shuffle-album]').forEach(b => b.onclick = () => {
+    const al = allAlbums.find(a => a.id === b.dataset.shuffleAlbum);
+    if (al && al.songIds.length) {
+      const ids = [...al.songIds].sort(() => Math.random() - 0.5);
+      playTrack(ids[0], ids);
+    }
+  });
+
+  const si = document.getElementById('search-input');
+  if (si) si.oninput = () => runSearch(si.value);
+
+  // Browse-artists live filter
+  const as = document.getElementById('artist-search');
+  if (as) as.oninput = () => {
+    const q = as.value.trim().toLowerCase();
+    const grid = document.getElementById('all-artists-grid');
+    const matched = allArtists
+      .filter(a => !q || a.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    grid.innerHTML = matched.map(artistCard).join('') || empty('No artists match that.');
+    grid.querySelectorAll('.card[data-arid]').forEach(c => c.onclick = () => renderRoute('artist', c.dataset.arid));
+  };
+  const hs = document.getElementById('home-search');
+  if (hs) hs.oninput = () => {
+    renderRoute('search');
+    const live = document.getElementById('search-input');
+    live.value = hs.value;
+    runSearch(hs.value);
+  };
+}
+
+function runSearch(q) {
+  const results = document.getElementById('search-results');
+  q = q.trim().toLowerCase();
+  if (!q) { results.innerHTML = '<div class="empty">Start typing to search.</div>'; return; }
+  const songs = allSongs.filter(s => (s.title + " " + (s.artist || "")).toLowerCase().includes(q)).slice(0, 20);
+  const albums = allAlbums.filter(a => a.title.toLowerCase().includes(q)).slice(0, 6);
+  const artists = allArtists.filter(a => a.name.toLowerCase().includes(q)).slice(0, 6);
+  results.innerHTML = `
+    ${songs.length ? `<h3>Songs</h3>${trackListHtml(songs)}` : ''}
+    ${albums.length ? `<h3>Albums</h3><div class="grid">${albums.map(albumCard).join('')}</div>` : ''}
+    ${artists.length ? `<h3>Artists</h3><div class="grid">${artists.map(artistCard).join('')}</div>` : ''}
+    ${!songs.length && !albums.length && !artists.length ? '<div class="empty">No matches.</div>' : ''}
+  `;
+  attachMainHandlers();
+}
+
+async function toggleLike(sid) {
+  const uid = currentUser.uid;
+  const path = `users/${uid}/liked/${sid}`;
+  if (likedIds.has(sid)) {
+    await set(ref(db, path), null);
+  } else {
+    await set(ref(db, path), Date.now());
+  }
+}
+
+// ---------- Player ----------
+function playTrack(sid, list) {
+  const song = allSongs.find(s => s.id === sid);
+  if (!song) return;
+  queue = list;
+  queueIndex = list.indexOf(sid);
+  currentTrack = song;
+  if (song.url) {
+    audio.src = song.url;
+    audio.play().catch(() => {});
+  } else {
+    audio.removeAttribute('src');
+    audio.load();
+  }
+  updateNowPlaying();
+  // mark playing in track list
+  document.querySelectorAll('.track').forEach(t => t.classList.toggle('playing', t.dataset.sid === sid));
+}
+
+function updateNowPlaying() {
+  if (!currentTrack) return;
+  document.getElementById('np-title').textContent = currentTrack.title;
+  document.getElementById('np-artist').textContent = currentTrack.artist || "";
+  const art = document.getElementById('np-art');
+  if (currentTrack.cover) art.innerHTML = `<img src="${escapeAttr(currentTrack.cover)}">`;
+  else art.textContent = (currentTrack.title || "z")[0].toLowerCase();
+  document.getElementById('t-dur').textContent = fmtTime(currentTrack.duration || 0);
+  updateLikeIcon();
+}
+
+function updateLikeIcon() {
+  const btn = document.getElementById('np-like');
+  if (!currentTrack) return;
+  const liked = likedIds.has(currentTrack.id);
+  btn.classList.toggle('liked', liked);
+  btn.querySelector('path').parentElement.setAttribute('fill', liked ? 'currentColor' : 'none');
+}
+
+document.getElementById('np-like').onclick = () => { if (currentTrack) toggleLike(currentTrack.id); };
+
+document.getElementById('btn-play').onclick = () => {
+  if (!currentTrack) return;
+  if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+};
+document.getElementById('btn-next').onclick = next;
+document.getElementById('btn-prev').onclick = () => {
+  if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+  if (queueIndex > 0) playTrack(queue[queueIndex - 1], queue);
+};
+
+let repeatMode = 0; // 0 off, 1 all, 2 one
+document.getElementById('btn-repeat').onclick = () => {
+  repeatMode = (repeatMode + 1) % 3;
+  const b = document.getElementById('btn-repeat');
+  b.style.color = repeatMode === 0 ? '' : 'var(--zrap-green)';
+  b.title = ['Repeat off', 'Repeat all', 'Repeat one'][repeatMode];
+};
+let shuffle = false;
+document.getElementById('btn-shuffle').onclick = () => {
+  shuffle = !shuffle;
+  document.getElementById('btn-shuffle').style.color = shuffle ? 'var(--zrap-green)' : '';
+};
+
+function next() {
+  if (!queue.length) return;
+  if (repeatMode === 2) { audio.currentTime = 0; audio.play().catch(() => {}); return; }
+  let i;
+  if (shuffle) i = Math.floor(Math.random() * queue.length);
+  else i = queueIndex + 1;
+  if (i >= queue.length) {
+    if (repeatMode === 1) i = 0;
+    else { audio.pause(); return; }
+  }
+  playTrack(queue[i], queue);
+}
+
+audio.addEventListener('ended', next);
+audio.addEventListener('play', () => {
+  document.getElementById('play-icon').innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
+});
+audio.addEventListener('pause', () => {
+  document.getElementById('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+});
+audio.addEventListener('timeupdate', () => {
+  const dur = audio.duration || currentTrack?.duration || 0;
+  document.getElementById('t-cur').textContent = fmtTime(audio.currentTime);
+  if (dur) document.getElementById('t-dur').textContent = fmtTime(dur);
+  document.getElementById('pfill').style.width = dur ? (audio.currentTime / dur * 100) + '%' : '0%';
+});
+
+document.getElementById('progress').onclick = (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - r.left) / r.width;
+  if (audio.duration) audio.currentTime = pct * audio.duration;
+};
+document.getElementById('vol').onclick = (e) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  audio.volume = pct;
+  document.getElementById('vfill').style.width = (pct * 100) + '%';
+};
+
+// ---------- utils ----------
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  const m = Math.floor(s / 60); const r = s % 60;
+  return m + ':' + String(r).padStart(2, '0');
+}
+function fmtTotal(s) {
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60); return h + ' hr ' + (m % 60) + ' min';
+}
+function timeGreeting() {
+  const h = new Date().getHours();
+  if (h < 5) return 'night'; if (h < 12) return 'morning';
+  if (h < 18) return 'afternoon'; return 'evening';
+}
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(s) { return escapeHtml(s); }
+function empty(msg) { return `<div class="empty">${escapeHtml(msg)}</div>`; }
+</script>
+</body>
+</html>
